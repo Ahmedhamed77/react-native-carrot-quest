@@ -1,0 +1,23 @@
+{
+  "cxxNamespace": ["carrotquest"],
+  "ios": {
+    "iosModuleName": "CarrotQuest"
+  },
+  "android": {
+    "androidNamespace": ["carrotquest"],
+    "androidCxxLibName": "carrotquest"
+  },
+  "autolinking": {
+    "CarrotQuest": {
+      "ios": {
+        "language": "swift",
+        "implementationClassName": "CarrotQuest"
+      },
+      "android": {
+        "language": "kotlin",
+        "implementationClassName": "CarrotQuest"
+      }
+    }
+  },
+  "ignorePaths": ["node_modules"]
+}
