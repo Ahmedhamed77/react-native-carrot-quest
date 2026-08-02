@@ -28,9 +28,33 @@ jobs:
       - name: Lint files
         run: yarn lint
 
+      - name: Generate nitrogen code
+        run: yarn nitrogen
+
       - name: Typecheck files
         run: yarn typecheck
 
+      # Needs the generated headers: one suite scans them for enum members that
+      # collide with C macros (React Native defines DEBUG in Debug builds).
+      - name: Run unit tests
+        run: yarn test
+
+  verify-native:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      # Carrot does not officially support React Native, so the bridge tracks
+      # the vendor SDKs itself. --strict (also implied by CI=true) makes a
+      # skipped platform a failure, so a missing prerequisite cannot read green.
+      # iOS is verified in build-ios, where the pod is installed.
+      - name: Verify Android SDK surface
+        run: yarn verify:native --android --strict
 
   build-library:
     runs-on: ubuntu-latest
@@ -159,4 +183,23 @@ jobs:
       - name: Build example for iOS
         run: |
           yarn turbo run build:ios --cache-dir="${{ env.TURBO_CACHE_DIR }}"
+
+      # The pod install above is skipped on a turbo cache hit, but the verifier
+      # reads CarrotquestSDK's .swiftinterface straight off disk. Install it
+      # here when it is missing so a cache hit cannot fail the strict check.
+      - name: Ensure CarrotquestSDK pod is present
+        run: |
+          INTERFACE="example/ios/Pods/CarrotquestSDK/CarrotSDK.xcframework/ios-arm64/CarrotSDK.framework/Modules/CarrotSDK.swiftmodule/arm64-apple-ios.swiftinterface"
+
+          if [[ ! -f "$INTERFACE" ]]; then
+            echo "Pods missing (turbo cache hit); installing for verification."
+            cd example
+            bundle install
+            bundle exec pod install --project-directory=ios
+          fi
+
+      # Runs here rather than in verify-native because it needs the installed
+      # pod. --strict makes a missing interface a failure, not a skip.
+      - name: Verify iOS SDK surface
+        run: yarn verify:native --ios --strict
 

@@ -1,0 +1,238 @@
+{
+  "$comment": "Native SDK symbols this bridge calls, and the SDK versions they were last verified against. Run `yarn verify:native` after bumping either pin; the offline guard in src/__tests__/native-compat.test.ts fails if a pin moves without the corresponding verifiedVersion being updated here.",
+  "ios": {
+    "pod": "CarrotquestSDK",
+    "verifiedVersion": "3.2.1",
+    "podspecConstraint": "~> 3.1",
+    "requiredSymbols": [
+      "func setup(withApiKey key: Swift.String, useEuServer: Swift.Bool",
+      "func auth(withUserId userId: Swift.String, withUserAuthKey key: Swift.String",
+      "func hashedAuth(withUserId userId: Swift.String, withHash hash: Swift.String",
+      "func logout(successHandler:",
+      "func openChat()",
+      "func closeChat()",
+      "var isOpen: Swift.Bool",
+      "func onVisibilityUIChanged(",
+      "func setTheme(_ theme: CarrotSDK.Carrot.Theme)",
+      "func getUnreadConversationsCount(",
+      "func getUnreadMessagesCount(",
+      "func setUserProperty(_ properties: [CarrotSDK.UserProperty])",
+      "func trackEvent(withName name: Swift.String, withParams params: Swift.String)",
+      "func trackEvent(withName name: Swift.String, withParamsDict paramsDict:",
+      "func trackScreen(_ screenName: Swift.String)",
+      "func trackUtm(_ url: Foundation.URL)",
+      "let version: Swift.String",
+      "func setToken(_ token: Swift.String)",
+      "func deleteToken()",
+      "func pushNotificationsUnsubscribe()",
+      "func pushCampaignsUnsubscribe()",
+      "func show(from userInfo: [Swift.String : Any]",
+      "func clickNotification(userInfo: [Swift.String : Any]",
+      "func canHandle(_ userInfo: [Swift.String : Any])",
+      "func isShownEarlier(userInfo: [Swift.String : Any]",
+      "func set(for type: CarrotSDK.CustomUrlOpener.UrlType",
+      "func openBrowserLink(_ url: Foundation.URL)",
+      "func openUniversalLink(_ url: Foundation.URL)",
+      "init(key: Swift.String, value: Swift.String, operation:",
+      "init(key: CarrotSDK.CarrotUserProperty.Property, value: Swift.String, operation:",
+      "init(key: CarrotSDK.EcommerceUserProperty.Property, value: Swift.String, operation:"
+    ]
+  },
+  "android": {
+    "artifact": "io.carrotquest:android-sdk",
+    "verifiedVersion": "3.1.0-commonRelease",
+    "classes": [
+      {
+        "path": "io/carrotquest_sdk/android/core/main/cqb.class",
+        "comment": "SDK 3.x obfuscates the implementation class; io.carrotquest_sdk.android.Carrot extends it and inherits these statics.",
+        "symbols": [
+          "setup(Landroid/content/Context;Ljava/lang/String;Lio/carrotquest_sdk/android/Callback;)V",
+          "setup(Landroid/content/Context;Ljava/lang/String;ZLio/carrotquest_sdk/android/Callback;)V",
+          "auth(Ljava/lang/String;Ljava/lang/String;Lio/carrotquest_sdk/android/Callback;)V",
+          "hashedAuth(Ljava/lang/String;Ljava/lang/String;Lio/carrotquest_sdk/android/Callback;)V",
+          "deInit(Lio/carrotquest_sdk/android/Callback;)V",
+          "isInit()Z",
+          "getVersion()Ljava/lang/String;",
+          "openChat(Landroid/content/Context;)V",
+          "setCloseChatCallback(Lio/carrotquest_sdk/android/Callback;)V",
+          "setTheme(Lio/carrotquest_sdk/android/core/main/ThemeSdk;)V",
+          "setParentActivityClassName(Ljava/lang/String;)V",
+          "setNotificationIcon(I)V",
+          "setLogLevel(Lio/carrotquest_sdk/android/core/logging/SdkLogLevel;)V",
+          "setLogIncludeSensitive(Z)V",
+          "getDiagnostics()Lio/carrotquest_sdk/android/core/logging/SdkDiagnostics;",
+          "getUnreadConversations()Ljava/util/List;",
+          "setUnreadConversationsCallback(Lio/carrotquest_sdk/android/Callback;)V",
+          "setUserProperty(Ljava/util/List;)V",
+          "trackEvent(Ljava/lang/String;)V",
+          "trackEvent(Ljava/lang/String;Lio/carrotquest_sdk/android/models/EventParams;)V",
+          "trackScreen(Ljava/lang/String;)V",
+          "trackUtm(Ljava/lang/String;)V",
+          "sendPushToken(Ljava/lang/String;)V",
+          "sendPushNotification(Ljava/util/Map;Landroid/content/Context;)V",
+          "isCarrotPush(Ljava/util/Map;)Z",
+          "isAutoMessage(Ljava/util/Map;)Z",
+          "pushNotificationsUnsubscribe()V",
+          "pushCampaignsUnsubscribe()V",
+          "setLogSink(Lio/carrotquest_sdk/android/core/logging/SdkLogSink;)V"
+        ]
+      },
+      {
+        "path": "io/carrotquest_sdk/android/models/EventParams.class",
+        "symbols": [
+          "builder()Lio/carrotquest_sdk/android/models/EventParams$Builder;"
+        ]
+      },
+      {
+        "path": "io/carrotquest_sdk/android/models/EventParams$Builder.class",
+        "comment": "trackEvent dispatches to the put overload matching each JS value type.",
+        "symbols": [
+          "put(Ljava/lang/String;Ljava/lang/String;)Lio/carrotquest_sdk/android/models/EventParams$Builder;",
+          "put(Ljava/lang/String;Z)Lio/carrotquest_sdk/android/models/EventParams$Builder;",
+          "put(Ljava/lang/String;J)Lio/carrotquest_sdk/android/models/EventParams$Builder;",
+          "put(Ljava/lang/String;D)Lio/carrotquest_sdk/android/models/EventParams$Builder;",
+          "build()Lio/carrotquest_sdk/android/models/EventParams;"
+        ]
+      },
+      {
+        "path": "io/carrotquest_sdk/android/models/UserProperty.class",
+        "symbols": [
+          "<init>(Ljava/lang/String;Ljava/lang/String;)V",
+          "<init>(Lio/carrotquest_sdk/android/models/Operation;Ljava/lang/String;Ljava/lang/String;)V"
+        ]
+      },
+      {
+        "path": "io/carrotquest_sdk/android/models/CarrotUserProperty.class",
+        "symbols": [
+          "<init>(Lio/carrotquest_sdk/android/models/Operation;Lio/carrotquest_sdk/android/models/CarrotUserProperty$Property;Ljava/lang/String;)V"
+        ]
+      },
+      {
+        "path": "io/carrotquest_sdk/android/models/EcommerceUserProperty.class",
+        "symbols": [
+          "<init>(Lio/carrotquest_sdk/android/models/Operation;Lio/carrotquest_sdk/android/models/EcommerceUserProperty$Property;Ljava/lang/String;)V"
+        ]
+      },
+      {
+        "path": "io/carrotquest_sdk/android/core/logging/SdkDiagnostics.class",
+        "symbols": [
+          "toFormattedString()Ljava/lang/String;"
+        ]
+      },
+      {
+        "path": "io/carrotquest_sdk/android/core/logging/SdkLogEntry.class",
+        "comment": "onLog reads every one of these off the entry.",
+        "symbols": [
+          "getTimestampMs()J",
+          "getLevel()Lio/carrotquest_sdk/android/core/logging/SdkLogLevel;",
+          "getCategory()Lio/carrotquest_sdk/android/core/logging/SdkLogCategory;",
+          "getTag()Ljava/lang/String;",
+          "getMessage()Ljava/lang/String;",
+          "getFields()Ljava/util/Map;",
+          "getThrowable()Ljava/lang/Throwable;"
+        ]
+      },
+      {
+        "path": "io/carrotquest_sdk/android/core/logging/SdkLogSink.class",
+        "symbols": [
+          "onLog(Lio/carrotquest_sdk/android/core/logging/SdkLogEntry;)V"
+        ]
+      }
+    ],
+    "enums": [
+      {
+        "path": "io/carrotquest_sdk/android/models/Operation.class",
+        "constants": [
+          "UPDATE_OR_CREATE",
+          "SET_ONCE",
+          "ADD",
+          "DELETE",
+          "APPEND",
+          "UNION",
+          "EXCLUDE"
+        ]
+      },
+      {
+        "path": "io/carrotquest_sdk/android/core/main/ThemeSdk.class",
+        "constants": [
+          "LIGHT",
+          "DARK",
+          "FROM_WEB",
+          "FROM_DEVICE"
+        ]
+      },
+      {
+        "path": "io/carrotquest_sdk/android/core/logging/SdkLogLevel.class",
+        "constants": [
+          "NONE",
+          "ERROR",
+          "WARN",
+          "INFO",
+          "DEBUG",
+          "VERBOSE"
+        ]
+      },
+      {
+        "path": "io/carrotquest_sdk/android/core/logging/SdkLogCategory.class",
+        "constants": [
+          "GENERAL",
+          "NETWORK",
+          "CONNECTIVITY",
+          "AUTH",
+          "REALTIME",
+          "LIFECYCLE",
+          "DATABASE",
+          "PUSH"
+        ]
+      },
+      {
+        "path": "io/carrotquest_sdk/android/models/CarrotUserProperty$Property.class",
+        "constants": [
+          "NAME",
+          "PHONE",
+          "EMAIL"
+        ]
+      },
+      {
+        "path": "io/carrotquest_sdk/android/models/EcommerceUserProperty$Property.class",
+        "constants": [
+          "CART_AMOUNT",
+          "VIEWED_PRODUCTS",
+          "CART_ITEMS",
+          "LAST_ORDER_STATUS",
+          "LAST_PAYMENT",
+          "REVENUE",
+          "PROFIT",
+          "GROUP",
+          "DISCOUNT",
+          "ORDERS_COUNT",
+          "ORDERED_ITEMS",
+          "ORDERED_CATEGORIES",
+          "VIEWED_CATEGORIES"
+        ]
+      }
+    ],
+    "genericSymbols": [
+      {
+        "path": "io/carrotquest_sdk/android/core/main/cqb.class",
+        "comment": "The Callback type parameter decides what the bridge must implement.",
+        "symbols": [
+          "setup(Landroid/content/Context;Ljava/lang/String;Lio/carrotquest_sdk/android/Callback<Ljava/lang/Boolean;>;)V",
+          "setup(Landroid/content/Context;Ljava/lang/String;ZLio/carrotquest_sdk/android/Callback<Ljava/lang/Boolean;>;)V",
+          "auth(Ljava/lang/String;Ljava/lang/String;Lio/carrotquest_sdk/android/Callback<Ljava/lang/String;>;)V",
+          "hashedAuth(Ljava/lang/String;Ljava/lang/String;Lio/carrotquest_sdk/android/Callback<Ljava/lang/String;>;)V",
+          "deInit(Lio/carrotquest_sdk/android/Callback<Ljava/lang/Boolean;>;)V",
+          "setCloseChatCallback(Lio/carrotquest_sdk/android/Callback<Ljava/lang/Boolean;>;)V",
+          "setUnreadConversationsCallback(Lio/carrotquest_sdk/android/Callback<Ljava/util/List<Ljava/lang/String;>;>;)V",
+          "getUnreadConversations()Ljava/util/List<Ljava/lang/String;>;"
+        ]
+      },
+      {
+        "path": "io/carrotquest_sdk/android/core/logging/SdkLogEntry.class",
+        "symbols": [
+          "getFields()Ljava/util/Map<Ljava/lang/String;Ljava/lang/String;>;"
+        ]
+      }
+    ]
+  }
+}

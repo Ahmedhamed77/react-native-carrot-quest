@@ -102,7 +102,36 @@ The `package.json` file contains various scripts for common tasks:
     - `yarn example start`: start the Metro server for the example app.
 - `yarn example android`: run the example app on Android.
 - `yarn example ios`: run the example app on iOS.
-  
+- `yarn test`: run the unit tests.
+- `yarn verify:native`: check the bridge against the pinned native SDKs.
+
+### Verifying the native SDK surface
+
+Carrot does not officially support React Native, so this package tracks the
+vendor SDKs itself. Two checks guard against drift:
+
+```bash
+yarn test            # offline: fails if a version pin moved without re-verification
+yarn verify:native   # online: checks every native symbol against the real artifacts
+```
+
+`verify:native` downloads the pinned Android AAR, parses its API class, and
+reads the `.swiftinterface` from the pod installed under `example/ios/Pods`
+(run `yarn example ios` or `pod install` there first). It compares both against
+`scripts/native-api.json`.
+
+Pass `--strict` — implied when `CI=true` — to make a skipped platform a failure
+instead of a pass. Use it anywhere the result gates a merge, so a missing
+prerequisite can never read as green.
+
+**After bumping an SDK version**, run `yarn verify:native`; on success it
+updates `verifiedVersion` in `scripts/native-api.json` for you. **After adding a
+native call**, add its symbol to that file so the check covers it too.
+
+The Android side needs `python3` and `unzip`. The class parser is
+`scripts/lib/classdump.py` — note `.gitignore` has a blanket `lib/` rule with an
+explicit negation for this directory; keep that negation if you edit it.
+
 ### Sending a pull request
 
 > **Working on your first pull request?** You can learn how from this _free_ series: [How to Contribute to an Open Source Project on GitHub](https://app.egghead.io/playlists/how-to-contribute-to-an-open-source-project-on-github).
