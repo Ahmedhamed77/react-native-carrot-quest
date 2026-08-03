@@ -51,15 +51,16 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ticketscloud/react-native-carrot-quest.git"
+    "url": "git+https://github.com/Ahmedhamed77/react-native-carrot-quest.git"
   },
-  "author": "Hamed <ahmedhamed7728@gmail.com> (https://github.com/ticketscloud)",
+  "author": "Ahmed Hamed <ahmedhamed7728@gmail.com> (https://github.com/Ahmedhamed77)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/ticketscloud/react-native-carrot-quest/issues"
+    "url": "https://github.com/Ahmedhamed77/react-native-carrot-quest/issues"
   },
-  "homepage": "https://github.com/ticketscloud/react-native-carrot-quest#readme",
+  "homepage": "https://github.com/Ahmedhamed77/react-native-carrot-quest#readme",
   "publishConfig": {
+    "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
   "devDependencies": {
