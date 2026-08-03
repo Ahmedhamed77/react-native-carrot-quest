@@ -40,6 +40,21 @@ final class CarrotQuest: HybridCarrotQuestSpec {
     return Carrot.shared.version
   }
 
+  /// Keep setup readiness inside the native package, never in consuming apps.
+  private func whenConfigured<T>(
+    _ promise: Promise<T>,
+    operation: @escaping () -> Void
+  ) {
+    CarrotQuestSetup.whenConfigured { error in
+      if let error = error {
+        promise.reject(withError: error)
+        return
+      }
+
+      operation()
+    }
+  }
+
   // MARK: - Authentication
 
   func auth(userId: String, userAuthKey: String) throws -> Promise<String?> {
@@ -67,19 +82,16 @@ final class CarrotQuest: HybridCarrotQuestSpec {
   /// Shared plumbing for the two auth flows — they differ only in which SDK
   /// call they make.
   private func authenticate(
-    _ call: (@escaping (String) -> Void, @escaping (String) -> Void) -> Void
+    _ call: @escaping (@escaping (String) -> Void, @escaping (String) -> Void) -> Void
   ) -> Promise<String?> {
     let promise = Promise<String?>()
 
-    guard isConfigured else {
-      promise.reject(withError: CarrotQuestError.notConfigured)
-      return promise
+    whenConfigured(promise) {
+      call(
+        { carrotId in promise.resolve(withResult: carrotId) },
+        { message in promise.reject(withError: CarrotQuestError.authFailed(message)) }
+      )
     }
-
-    call(
-      { carrotId in promise.resolve(withResult: carrotId) },
-      { message in promise.reject(withError: CarrotQuestError.authFailed(message)) }
-    )
 
     return promise
   }
@@ -87,21 +99,16 @@ final class CarrotQuest: HybridCarrotQuestSpec {
   func logout() throws -> Promise<Void> {
     let promise = Promise<Void>()
 
-    guard isConfigured else {
-      // Nothing to log out of. Treat as success so callers can log out
-      // unconditionally during teardown.
-      promise.resolve()
-      return promise
+    whenConfigured(promise) {
+      Carrot.shared.logout(
+        successHandler: {
+          promise.resolve()
+        },
+        errorHandler: { message in
+          promise.reject(withError: CarrotQuestError.logoutFailed(message))
+        }
+      )
     }
-
-    Carrot.shared.logout(
-      successHandler: {
-        promise.resolve()
-      },
-      errorHandler: { message in
-        promise.reject(withError: CarrotQuestError.logoutFailed(message))
-      }
-    )
 
     return promise
   }
@@ -111,19 +118,16 @@ final class CarrotQuest: HybridCarrotQuestSpec {
   func openChat() throws -> Promise<Void> {
     let promise = Promise<Void>()
 
-    guard isConfigured else {
-      promise.reject(withError: CarrotQuestError.notConfigured)
-      return promise
-    }
+    whenConfigured(promise) {
+      DispatchQueue.main.async {
+        guard Self.hasActiveWindow() else {
+          promise.reject(withError: CarrotQuestError.noPresentingWindow)
+          return
+        }
 
-    DispatchQueue.main.async {
-      guard Self.hasActiveWindow() else {
-        promise.reject(withError: CarrotQuestError.noPresentingWindow)
-        return
+        Carrot.shared.openChat()
+        promise.resolve()
       }
-
-      Carrot.shared.openChat()
-      promise.resolve()
     }
 
     return promise
@@ -132,29 +136,35 @@ final class CarrotQuest: HybridCarrotQuestSpec {
   func closeChat() throws -> Promise<Void> {
     let promise = Promise<Void>()
 
-    DispatchQueue.main.async {
-      Carrot.shared.closeChat()
-      promise.resolve()
+    whenConfigured(promise) {
+      DispatchQueue.main.async {
+        Carrot.shared.closeChat()
+        promise.resolve()
+      }
     }
 
     return promise
   }
 
   var isChatOpen: Bool {
-    return Carrot.shared.isOpen
+    return isConfigured && Carrot.shared.isOpen
   }
 
   func onChatVisibilityChanged(listener: @escaping (Bool) -> Void) throws {
-    Carrot.shared.onVisibilityUIChanged { visible in
-      listener(visible)
+    CarrotQuestSetup.runWhenConfigured("onChatVisibilityChanged") {
+      Carrot.shared.onVisibilityUIChanged { visible in
+        listener(visible)
+      }
     }
   }
 
   func setTheme(theme: CarrotQuestTheme) throws {
     let native = Self.nativeTheme(theme)
 
-    DispatchQueue.main.async {
-      Carrot.shared.setTheme(native)
+    CarrotQuestSetup.runWhenConfigured("setTheme") {
+      DispatchQueue.main.async {
+        Carrot.shared.setTheme(native)
+      }
     }
   }
 
@@ -181,13 +191,10 @@ final class CarrotQuest: HybridCarrotQuestSpec {
   func getUnreadConversationsCount() throws -> Promise<Double> {
     let promise = Promise<Double>()
 
-    guard isConfigured else {
-      promise.reject(withError: CarrotQuestError.notConfigured)
-      return promise
-    }
-
-    Carrot.shared.getUnreadConversationsCount { count in
-      promise.resolve(withResult: Double(count))
+    whenConfigured(promise) {
+      Carrot.shared.getUnreadConversationsCount { count in
+        promise.resolve(withResult: Double(count))
+      }
     }
 
     return promise
@@ -196,13 +203,10 @@ final class CarrotQuest: HybridCarrotQuestSpec {
   func getUnreadMessagesCount() throws -> Promise<Double?> {
     let promise = Promise<Double?>()
 
-    guard isConfigured else {
-      promise.reject(withError: CarrotQuestError.notConfigured)
-      return promise
-    }
-
-    Carrot.shared.getUnreadMessagesCount { count in
-      promise.resolve(withResult: Double(count))
+    whenConfigured(promise) {
+      Carrot.shared.getUnreadMessagesCount { count in
+        promise.resolve(withResult: Double(count))
+      }
     }
 
     return promise
@@ -220,7 +224,9 @@ final class CarrotQuest: HybridCarrotQuestSpec {
 
     guard !userProperties.isEmpty else { return }
 
-    Carrot.shared.setUserProperty(userProperties)
+    CarrotQuestSetup.runWhenConfigured("setUserProperties") {
+      Carrot.shared.setUserProperty(userProperties)
+    }
   }
 
   func setProperties(properties: [CarrotQuestProperty]) throws {
@@ -228,7 +234,9 @@ final class CarrotQuest: HybridCarrotQuestSpec {
 
     guard !userProperties.isEmpty else { return }
 
-    Carrot.shared.setUserProperty(userProperties)
+    CarrotQuestSetup.runWhenConfigured("setProperties") {
+      Carrot.shared.setUserProperty(userProperties)
+    }
   }
 
   /// Map the ergonomic struct onto Carrot's property types.
@@ -353,15 +361,17 @@ final class CarrotQuest: HybridCarrotQuestSpec {
   func trackEvent(name: String, params: [String: CarrotQuestEventValue]?) throws {
     guard !name.isEmpty else { return }
 
-    guard let params = params, !params.isEmpty else {
-      Carrot.shared.trackEvent(withName: name, withParams: "")
-      return
-    }
+    CarrotQuestSetup.runWhenConfigured("trackEvent") {
+      guard let params = params, !params.isEmpty else {
+        Carrot.shared.trackEvent(withName: name, withParams: "")
+        return
+      }
 
-    Carrot.shared.trackEvent(
-      withName: name,
-      withParamsDict: params.mapValues(Self.unwrap)
-    )
+      Carrot.shared.trackEvent(
+        withName: name,
+        withParamsDict: params.mapValues(Self.unwrap)
+      )
+    }
   }
 
   /// Unwrap the JS variant into the untyped value the SDK's params dictionary
@@ -384,7 +394,9 @@ final class CarrotQuest: HybridCarrotQuestSpec {
   func trackScreen(name: String) throws {
     guard !name.isEmpty else { return }
 
-    Carrot.shared.trackScreen(name)
+    CarrotQuestSetup.runWhenConfigured("trackScreen") {
+      Carrot.shared.trackScreen(name)
+    }
   }
 
   func trackUtm(url: String) throws {
@@ -396,21 +408,37 @@ final class CarrotQuest: HybridCarrotQuestSpec {
   // MARK: - Push notifications
 
   func setPushToken(token: String) throws {
-    CarrotNotificationService.shared.setToken(token)
+    CarrotQuestSetup.runWhenConfigured("setPushToken") {
+      CarrotNotificationService.shared.setToken(token)
+    }
   }
 
   func deletePushToken() throws {
-    CarrotNotificationService.shared.deleteToken()
+    CarrotQuestSetup.runWhenConfigured("deletePushToken") {
+      CarrotNotificationService.shared.deleteToken()
+    }
   }
 
   func pushNotificationsUnsubscribe() throws -> Promise<Void> {
-    CarrotNotificationService.shared.pushNotificationsUnsubscribe()
-    return Promise.resolved(withResult: ())
+    let promise = Promise<Void>()
+
+    whenConfigured(promise) {
+      CarrotNotificationService.shared.pushNotificationsUnsubscribe()
+      promise.resolve()
+    }
+
+    return promise
   }
 
   func pushCampaignsUnsubscribe() throws -> Promise<Void> {
-    CarrotNotificationService.shared.pushCampaignsUnsubscribe()
-    return Promise.resolved(withResult: ())
+    let promise = Promise<Void>()
+
+    whenConfigured(promise) {
+      CarrotNotificationService.shared.pushCampaignsUnsubscribe()
+      promise.resolve()
+    }
+
+    return promise
   }
 
   func isCarrotPush(payloadJson: String) throws -> Bool {
@@ -437,7 +465,9 @@ final class CarrotQuest: HybridCarrotQuestSpec {
       throw CarrotQuestError.invalidPayload
     }
 
-    CarrotNotificationService.shared.show(from: userInfo, appGroudDomain: appGroup)
+    CarrotQuestSetup.runWhenConfigured("handlePushNotification") {
+      CarrotNotificationService.shared.show(from: userInfo, appGroudDomain: self.appGroup)
+    }
   }
 
   func handlePushClick(payloadJson: String, openLink: Bool) throws {
@@ -445,11 +475,13 @@ final class CarrotQuest: HybridCarrotQuestSpec {
       throw CarrotQuestError.invalidPayload
     }
 
-    CarrotNotificationService.shared.clickNotification(
-      userInfo: userInfo,
-      appGroudDomain: appGroup,
-      openLink: openLink
-    )
+    CarrotQuestSetup.runWhenConfigured("handlePushClick") {
+      CarrotNotificationService.shared.clickNotification(
+        userInfo: userInfo,
+        appGroudDomain: self.appGroup,
+        openLink: openLink
+      )
+    }
   }
 
   func getPushLink(payloadJson: String) throws -> String? {
@@ -475,11 +507,13 @@ final class CarrotQuest: HybridCarrotQuestSpec {
       return promise
     }
 
-    CarrotNotificationService.shared.isShownEarlier(
-      userInfo: userInfo,
-      appGroudDomain: appGroup
-    ) { shown in
-      promise.resolve(withResult: shown)
+    whenConfigured(promise) {
+      CarrotNotificationService.shared.isShownEarlier(
+        userInfo: userInfo,
+        appGroudDomain: self.appGroup
+      ) { shown in
+        promise.resolve(withResult: shown)
+      }
     }
 
     return promise

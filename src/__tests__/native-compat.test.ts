@@ -21,6 +21,41 @@ const snapshot = JSON.parse(
 
 const gradle = readFileSync(join(root, 'android', 'build.gradle'), 'utf8');
 const podspec = readFileSync(join(root, 'CarrotQuest.podspec'), 'utf8');
+const androidSetup = readFileSync(
+  join(
+    root,
+    'android',
+    'src',
+    'main',
+    'java',
+    'com',
+    'margelo',
+    'nitro',
+    'carrotquest',
+    'CarrotQuestSetup.kt'
+  ),
+  'utf8'
+);
+const iosSetup = readFileSync(
+  join(root, 'ios', 'CarrotQuestSetup.swift'),
+  'utf8'
+);
+const androidBridge = readFileSync(
+  join(
+    root,
+    'android',
+    'src',
+    'main',
+    'java',
+    'com',
+    'margelo',
+    'nitro',
+    'carrotquest',
+    'CarrotQuest.kt'
+  ),
+  'utf8'
+);
+const iosBridge = readFileSync(join(root, 'ios', 'CarrotQuest.swift'), 'utf8');
 
 describe('android SDK pin', () => {
   const pinned = /carrotSdkVersion:\s*"([^"]+)"/.exec(gradle)?.[1];
@@ -97,5 +132,82 @@ describe('symbol snapshot', () => {
 
   it('records where the obfuscated Android API class lives', () => {
     expect(androidClasses[0]!.path).toMatch(/\.class$/);
+  });
+});
+
+describe('single-flight setup finalization', () => {
+  it('applies Android joined options before publishing Configured under the lock', () => {
+    const start = androidSetup.indexOf('private fun settleSuccess(');
+    const end = androidSetup.indexOf('private fun settleFailure(', start);
+    const finalization = androidSetup.slice(start, end);
+
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    expect(finalization).toMatch(
+      /synchronized\(lock\) \{\s*applyMutableOptions\([^)]+\)\s*state = State\.Configured\(identity\)/
+    );
+  });
+
+  it('queues the iOS joined theme before publishing configured and unlocking', () => {
+    const start = iosSetup.indexOf('private static func settleSuccess(');
+    const end = iosSetup.indexOf('private static func settleFailure(', start);
+    const finalization = iosSetup.slice(start, end);
+    const lock = finalization.indexOf('lock.lock()');
+    const apply = finalization.indexOf('applyTheme(theme)');
+    const configured = finalization.indexOf('state = .configured(identity)');
+    const unlock = finalization.indexOf('lock.unlock()');
+
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    expect(lock).toBeGreaterThan(-1);
+    expect(apply).toBeGreaterThan(lock);
+    expect(configured).toBeGreaterThan(apply);
+    expect(unlock).toBeGreaterThan(configured);
+  });
+});
+
+describe('one setup call owns native readiness', () => {
+  it('queues Android operations during setup and drains them on success or failure', () => {
+    expect(androidSetup).toMatch(
+      /is State\.Initializing -> \{\s*readinessWaiters\.add\(completion\)/
+    );
+    expect(androidSetup).toMatch(
+      /state = State\.Configured\(identity\)[\s\S]*ready = readinessWaiters\.toList\(\)[\s\S]*ready\.forEach \{ it\(null\) \}/
+    );
+    expect(androidSetup).toMatch(
+      /private fun settleFailure\(error: Throwable\)[\s\S]*ready = readinessWaiters\.toList\(\)[\s\S]*ready\.forEach \{ it\(error\) \}/
+    );
+  });
+
+  it('queues iOS operations during setup and drains them on success or failure', () => {
+    expect(iosSetup).toMatch(
+      /case \.initializing:\s*readinessWaiters\.append\(completion\)/
+    );
+    expect(iosSetup).toMatch(
+      /state = \.configured\(identity\)[\s\S]*let ready = readinessWaiters[\s\S]*completion\(nil\)/
+    );
+    expect(iosSetup).toMatch(
+      /private static func settleFailure\(_ error: Error\)[\s\S]*let ready = readinessWaiters[\s\S]*completion\(error\)/
+    );
+  });
+
+  it('routes the app-facing auth, chat, properties, and tracking APIs through readiness', () => {
+    for (const operation of [
+      'onChatVisibilityChanged',
+      'setUserProperties',
+      'trackEvent',
+      'trackScreen',
+      'setPushToken',
+    ]) {
+      expect(androidBridge).toContain(
+        `CarrotQuestSetup.runWhenConfigured("${operation}")`
+      );
+      expect(iosBridge).toContain(
+        `CarrotQuestSetup.runWhenConfigured("${operation}")`
+      );
+    }
+
+    expect(androidBridge).toContain('whenConfigured(promise)');
+    expect(iosBridge).toContain('whenConfigured(promise)');
   });
 });

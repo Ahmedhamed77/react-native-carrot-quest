@@ -60,6 +60,22 @@ class CarrotQuest : HybridCarrotQuestSpec() {
 
   override fun getSdkVersion(): String = Carrot.getVersion()
 
+  /** Keep setup readiness inside the native package, never in consuming apps. */
+  private fun <T> whenConfigured(promise: Promise<T>, operation: () -> Unit) {
+    CarrotQuestSetup.whenConfigured ready@ { error ->
+      if (error != null) {
+        promise.reject(error)
+        return@ready
+      }
+
+      try {
+        operation()
+      } catch (operationError: Throwable) {
+        promise.reject(operationError)
+      }
+    }
+  }
+
   // MARK: - Authentication
 
   override fun auth(userId: String, userAuthKey: String): Promise<String?> {
@@ -74,22 +90,19 @@ class CarrotQuest : HybridCarrotQuestSpec() {
   private fun authenticate(call: (Callback<String>) -> Unit): Promise<String?> {
     val promise = Promise<String?>()
 
-    if (!isConfigured) {
-      promise.reject(CarrotQuestNotConfiguredException())
-      return promise
+    whenConfigured(promise) {
+      call(
+        object : Callback<String> {
+          override fun onResponse(result: String?) {
+            promise.resolve(result)
+          }
+
+          override fun onFailure(t: Throwable) {
+            promise.reject(t)
+          }
+        },
+      )
     }
-
-    call(
-      object : Callback<String> {
-        override fun onResponse(result: String?) {
-          promise.resolve(result)
-        }
-
-        override fun onFailure(t: Throwable) {
-          promise.reject(t)
-        }
-      },
-    )
 
     return promise
   }
@@ -97,37 +110,32 @@ class CarrotQuest : HybridCarrotQuestSpec() {
   override fun logout(): Promise<Unit> {
     val promise = Promise<Unit>()
 
-    if (!isConfigured) {
-      // Nothing to log out of. Treat as success so callers can log out
-      // unconditionally during teardown.
-      promise.resolve(Unit)
-      return promise
+    whenConfigured(promise) {
+      Carrot.deInit(
+        object : Callback<Boolean> {
+          override fun onResponse(result: Boolean?) {
+            // The SDK signals success with `true`. Reinitialising on anything
+            // else would leave the previous user authenticated while logout()
+            // resolved.
+            if (result != true) {
+              promise.reject(CarrotQuestLogoutRejectedException())
+              return
+            }
+
+            // deInit tears the SDK down completely, so it has to be set up again
+            // before the next auth call can succeed. Only report success once
+            // that re-initialisation has actually settled.
+            CarrotQuestSetup.reinitialiseAfterLogout { error ->
+              if (error == null) promise.resolve(Unit) else promise.reject(error)
+            }
+          }
+
+          override fun onFailure(t: Throwable) {
+            promise.reject(t)
+          }
+        },
+      )
     }
-
-    Carrot.deInit(
-      object : Callback<Boolean> {
-        override fun onResponse(result: Boolean?) {
-          // The SDK signals success with `true`. Reinitialising on anything
-          // else would leave the previous user authenticated while logout()
-          // resolved.
-          if (result != true) {
-            promise.reject(CarrotQuestLogoutRejectedException())
-            return
-          }
-
-          // deInit tears the SDK down completely, so it has to be set up again
-          // before the next auth call can succeed. Only report success once
-          // that re-initialisation has actually settled.
-          CarrotQuestSetup.reinitialiseAfterLogout { error ->
-            if (error == null) promise.resolve(Unit) else promise.reject(error)
-          }
-        }
-
-        override fun onFailure(t: Throwable) {
-          promise.reject(t)
-        }
-      },
-    )
 
     return promise
   }
@@ -137,24 +145,21 @@ class CarrotQuest : HybridCarrotQuestSpec() {
   override fun openChat(): Promise<Unit> {
     val promise = Promise<Unit>()
 
-    if (!isConfigured) {
-      promise.reject(CarrotQuestNotConfiguredException())
-      return promise
-    }
+    whenConfigured(promise) operation@ {
+      val activity = NitroModules.applicationContext?.currentActivity
 
-    val activity = NitroModules.applicationContext?.currentActivity
+      if (activity == null) {
+        promise.reject(CarrotQuestNoActivityException())
+        return@operation
+      }
 
-    if (activity == null) {
-      promise.reject(CarrotQuestNoActivityException())
-      return promise
-    }
-
-    activity.runOnUiThread {
-      try {
-        Carrot.openChat(activity)
-        promise.resolve(Unit)
-      } catch (error: Throwable) {
-        promise.reject(error)
+      activity.runOnUiThread {
+        try {
+          Carrot.openChat(activity)
+          promise.resolve(Unit)
+        } catch (error: Throwable) {
+          promise.reject(error)
+        }
       }
     }
 
@@ -171,20 +176,24 @@ class CarrotQuest : HybridCarrotQuestSpec() {
     get() = false // iOS-only; the Android SDK exposes no visibility getter.
 
   override fun onChatVisibilityChanged(listener: (visible: Boolean) -> Unit) {
-    // Android only signals close, never open — documented on the spec.
-    Carrot.setCloseChatCallback(
-      object : Callback<Boolean> {
-        override fun onResponse(result: Boolean?) {
-          listener(false)
-        }
+    CarrotQuestSetup.runWhenConfigured("onChatVisibilityChanged") {
+      // Android only signals close, never open — documented on the spec.
+      Carrot.setCloseChatCallback(
+        object : Callback<Boolean> {
+          override fun onResponse(result: Boolean?) {
+            listener(false)
+          }
 
-        override fun onFailure(t: Throwable) = Unit
-      },
-    )
+          override fun onFailure(t: Throwable) = Unit
+        },
+      )
+    }
   }
 
   override fun setTheme(theme: CarrotQuestTheme) {
-    Carrot.setTheme(nativeTheme(theme))
+    CarrotQuestSetup.runWhenConfigured("setTheme") {
+      Carrot.setTheme(nativeTheme(theme))
+    }
   }
 
   private fun nativeTheme(theme: CarrotQuestTheme): ThemeSdk = when (theme) {
@@ -208,15 +217,8 @@ class CarrotQuest : HybridCarrotQuestSpec() {
   override fun getUnreadConversationsCount(): Promise<Double> {
     val promise = Promise<Double>()
 
-    if (!isConfigured) {
-      promise.reject(CarrotQuestNotConfiguredException())
-      return promise
-    }
-
-    try {
+    whenConfigured(promise) {
       promise.resolve(Carrot.getUnreadConversations().size.toDouble())
-    } catch (error: Throwable) {
-      promise.reject(error)
     }
 
     return promise
@@ -228,16 +230,18 @@ class CarrotQuest : HybridCarrotQuestSpec() {
   }
 
   override fun onUnreadConversationsChanged(listener: (count: Double) -> Unit) {
-    // The SDK declares Callback<List<String>> — a list of conversation ids.
-    Carrot.setUnreadConversationsCallback(
-      object : Callback<List<String>> {
-        override fun onResponse(result: List<String>?) {
-          listener((result?.size ?: 0).toDouble())
-        }
+    CarrotQuestSetup.runWhenConfigured("onUnreadConversationsChanged") {
+      // The SDK declares Callback<List<String>> — a list of conversation ids.
+      Carrot.setUnreadConversationsCallback(
+        object : Callback<List<String>> {
+          override fun onResponse(result: List<String>?) {
+            listener((result?.size ?: 0).toDouble())
+          }
 
-        override fun onFailure(t: Throwable) = Unit
-      },
-    )
+          override fun onFailure(t: Throwable) = Unit
+        },
+      )
+    }
   }
 
   // MARK: - User properties
@@ -247,7 +251,9 @@ class CarrotQuest : HybridCarrotQuestSpec() {
 
     if (userProperties.isEmpty()) return
 
-    Carrot.setUserProperty(userProperties)
+    CarrotQuestSetup.runWhenConfigured("setUserProperties") {
+      Carrot.setUserProperty(userProperties)
+    }
   }
 
   override fun setProperties(properties: Array<CarrotQuestProperty>) {
@@ -255,7 +261,9 @@ class CarrotQuest : HybridCarrotQuestSpec() {
 
     if (userProperties.isEmpty()) return
 
-    Carrot.setUserProperty(userProperties)
+    CarrotQuestSetup.runWhenConfigured("setProperties") {
+      Carrot.setUserProperty(userProperties)
+    }
   }
 
   /**
@@ -361,24 +369,25 @@ class CarrotQuest : HybridCarrotQuestSpec() {
   override fun trackEvent(name: String, params: Map<String, CarrotQuestEventValue>?) {
     if (name.isEmpty()) return
 
-    if (params.isNullOrEmpty()) {
-      Carrot.trackEvent(name)
-      return
-    }
+    CarrotQuestSetup.runWhenConfigured("trackEvent") {
+      if (params.isNullOrEmpty()) {
+        Carrot.trackEvent(name)
+      } else {
+        // SDK 3.x replaced the JSON-string overload with a typed EventParams,
+        // so values keep their JSON type instead of being stringified.
+        val builder = EventParams.builder()
 
-    // SDK 3.x replaced the JSON-string overload with a typed EventParams, so
-    // values keep their JSON type instead of being stringified.
-    val builder = EventParams.builder()
+        params.forEach { (key, value) ->
+          when (value) {
+            is CarrotQuestEventValue.First -> builder.put(key, value.value)
+            is CarrotQuestEventValue.Second -> builder.put(key, value.value)
+            is CarrotQuestEventValue.Third -> putNumber(builder, key, value.value)
+          }
+        }
 
-    params.forEach { (key, value) ->
-      when (value) {
-        is CarrotQuestEventValue.First -> builder.put(key, value.value)
-        is CarrotQuestEventValue.Second -> builder.put(key, value.value)
-        is CarrotQuestEventValue.Third -> putNumber(builder, key, value.value)
+        Carrot.trackEvent(name, builder.build())
       }
     }
-
-    Carrot.trackEvent(name, builder.build())
   }
 
   /**
@@ -399,7 +408,9 @@ class CarrotQuest : HybridCarrotQuestSpec() {
   override fun trackScreen(name: String) {
     if (name.isEmpty()) return
 
-    Carrot.trackScreen(name)
+    CarrotQuestSetup.runWhenConfigured("trackScreen") {
+      Carrot.trackScreen(name)
+    }
   }
 
   override fun trackUtm(url: String) {
@@ -413,7 +424,9 @@ class CarrotQuest : HybridCarrotQuestSpec() {
   override fun setPushToken(token: String) {
     if (token.isEmpty()) return
 
-    Carrot.sendPushToken(token)
+    CarrotQuestSetup.runWhenConfigured("setPushToken") {
+      Carrot.sendPushToken(token)
+    }
   }
 
   override fun deletePushToken() {
@@ -444,7 +457,9 @@ class CarrotQuest : HybridCarrotQuestSpec() {
     val payload = decodePayload(payloadJson) ?: throw CarrotQuestInvalidPayloadException()
     val context = NitroModules.applicationContext ?: return
 
-    Carrot.sendPushNotification(payload, context)
+    CarrotQuestSetup.runWhenConfigured("handlePushNotification") {
+      Carrot.sendPushNotification(payload, context)
+    }
   }
 
   override fun handlePushClick(payloadJson: String, openLink: Boolean) {
@@ -489,14 +504,12 @@ class CarrotQuest : HybridCarrotQuestSpec() {
     }.getOrNull()
   }
 
-  private inline fun runCatchingPromise(block: () -> Unit): Promise<Unit> {
+  private fun runCatchingPromise(block: () -> Unit): Promise<Unit> {
     val promise = Promise<Unit>()
 
-    try {
+    whenConfigured(promise) {
       block()
       promise.resolve(Unit)
-    } catch (error: Throwable) {
-      promise.reject(error)
     }
 
     return promise

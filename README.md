@@ -52,47 +52,124 @@ allprojects {
 
 ## Usage
 
-### Initialising
+### Pick an API style
 
-Pick one of these. Calling both is safe — the second joins the first rather than
-initialising twice.
-
-**From JS** — simplest, but the SDK only starts once your bundle loads:
+The default export exposes every method on one `CarrotQuest` object:
 
 ```ts
-import { setup } from 'react-native-carrot-quest';
+import CarrotQuest from 'react-native-carrot-quest';
 
-await setup('your-api-key', { locale: 'ru', theme: 'fromDevice' });
+CarrotQuest.setup('your-api-key', {
+  locale: 'ru',
+  theme: 'fromDevice',
+}).catch((error) => {
+  console.warn('Carrot Quest setup failed', error);
+});
+
+CarrotQuest.trackEvent('app_opened');
 ```
 
-**From native** — the SDK initialises during app launch, off the main thread,
-before JS is running:
+Named exports remain available and call the same functions:
 
-```swift
-// ios/AppDelegate.swift
-import CarrotQuest
-
-CarrotQuestSetup.configure(apiKey: "your-api-key", locale: "ru")
+```ts
+import { setup, trackEvent } from 'react-native-carrot-quest';
 ```
 
-```kotlin
-// android/app/src/main/java/.../MainApplication.kt
-import com.margelo.nitro.carrotquest.CarrotQuestSetup
+Carrot Quest is a process-wide native singleton, so a React Context provider is
+not required for setup, auth, tracking, or opening chat. Add a provider (or your
+existing state store) only when React components need shared **reactive** state,
+such as an unread badge or chat-visibility state.
 
-// Carrot.setup does I/O — keep it off the main thread.
-Thread {
-  CarrotQuestSetup.configure(
-    context = this,
-    apiKey = "your-api-key",
-    locale = "ru",
-    parentActivityClassName = "com.example.MainActivity",
-  ) { error -> if (error != null) Log.e("App", "Carrot setup failed", error) }
-}.start()
+Call `setup()` once. The package owns readiness natively: if another method is
+called while setup is still finishing, it waits for that same setup attempt.
+Your application does not need a provider, a readiness promise, or repeated
+`setup()` calls.
+
+### Option A: initialise from `index.js`
+
+Use this when Carrot Quest should start as soon as the JS bundle evaluates:
+
+```js
+import { AppRegistry } from 'react-native';
+import CarrotQuest from 'react-native-carrot-quest';
+import App from './App';
+import { name as appName } from './app.json';
+
+// Start setup early, but do not await it before registering the React app.
+CarrotQuest.setup('your-api-key', {
+  locale: 'ru',
+  theme: 'fromDevice',
+}).catch((error) => {
+  console.warn('Carrot Quest setup failed', error);
+});
+
+AppRegistry.registerComponent(appName, () => App);
 ```
 
-`setup()` resolves only once the SDK reports success and rejects on failure — an
-invalid key or a dead network surfaces as a rejection rather than a silently
-half-initialised SDK. Authenticating immediately after `await setup(...)` is safe.
+### Option B: initialise from `App.tsx`
+
+Use this when the first screen does not need Carrot Quest and you prefer to let
+React commit its first render before setup begins:
+
+```tsx
+import { useEffect } from 'react';
+import CarrotQuest from 'react-native-carrot-quest';
+
+export default function App() {
+  useEffect(() => {
+    CarrotQuest.setup('your-api-key', {
+      locale: 'ru',
+      theme: 'fromDevice',
+    }).catch((error) => {
+      console.warn('Carrot Quest setup failed', error);
+    });
+  }, []);
+
+  return <Navigation />;
+}
+```
+
+After this one call, use `CarrotQuest.auth()`, `openChat()`, `trackEvent()` and
+the rest of the API directly wherever they are needed. Do not hide the whole
+app behind the setup promise unless support chat is required for the first
+screen.
+
+### Does setup affect startup time?
+
+Potentially, yes—but the API style (default object, named imports, or provider)
+is not what matters. The important choices are **when setup starts** and whether
+your app waits for it before rendering:
+
+| Placement | SDK starts | Startup tradeoff |
+|---|---|---|
+| `index.js` | During JS bundle evaluation | Ready earlier; native CPU, disk, and network work may compete with startup. Registering the app without awaiting setup keeps it off the explicit render gate. |
+| `App.tsx` `useEffect` | After the first React commit | Usually the lowest-risk choice for first-render latency; chat becomes ready slightly later. |
+
+Importing the package only creates the Nitro hybrid-object binding. The
+meaningful work begins when `setup()` initializes the vendor SDK. Because the
+method returns a promise, calling it does not require blocking React, but gating
+your root component on that promise will extend time-to-content by the setup
+duration.
+
+Measure the impact in a **release build** over multiple cold launches. Compare a
+user-visible milestone such as navigation-ready or first content with and
+without early setup; timing only the setup promise measures SDK readiness, not
+its effect on the rest of startup.
+
+### Setup guarantees
+
+`setup()` returns a promise so the application can observe success or failure—an
+invalid key or a dead network does not leave a silently half-initialised SDK.
+You do not need to await that promise before calling another package method;
+the native readiness queue preserves the call order.
+
+Matching concurrent calls are single-flight. Mutable options contributed by a
+call that joins during initialization are applied before every joined promise
+resolves, including a call arriving while success is being finalized.
+
+SDK operations called during initialization wait in the native setup queue.
+Promise-returning operations reject with the setup error if initialization
+fails; fire-and-forget operations are skipped and logged.
 
 Calling `setup()` again with a **different** API key, locale, EU-server flag,
 App Group or service mode rejects with a configuration-conflict error rather
@@ -105,16 +182,6 @@ await setup(stagingKey); // rejects — production is still active
 
 The native SDKs cannot be re-pointed at another account at runtime. Restart the
 process to change it.
-
-Options that *can* change at runtime — `theme`, `parentActivityClassName`,
-`notificationIconResourceName`, `logLevel`, `logIncludeSensitive` — are applied
-on every call, so a later `setup()` can add what a native launch-time init did
-not set:
-
-```ts
-// AppDelegate/MainApplication initialised without a theme…
-await setup(key, { theme: 'dark' }); // …and this applies it
-```
 
 ### Authenticating
 

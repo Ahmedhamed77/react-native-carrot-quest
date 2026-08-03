@@ -51,6 +51,8 @@ import CarrotSDK
   /// Callers waiting on the in-flight attempt. Drained exactly once when it
   /// settles.
   private static var pending: [(Error?) -> Void] = []
+  /// SDK operations called after setup started but before it finished.
+  private static var readinessWaiters: [(Error?) -> Void] = []
   private static var configuredAppGroup: String?
   /// Theme supplied by a caller that joined an in-flight init; applied on
   /// success so a later `setup` does not lose it.
@@ -79,6 +81,41 @@ import CarrotSDK
   /// Whether the SDK finished initialising successfully.
   @objc public static var isConfigured: Bool {
     return apiKey != nil
+  }
+
+  /// Run an SDK operation once the one application-level setup call settles.
+  ///
+  /// Operations arriving during setup wait natively. A call made before setup
+  /// starts, or a setup failure, receives an error instead of racing the SDK.
+  static func whenConfigured(_ completion: @escaping (Error?) -> Void) {
+    lock.lock()
+
+    switch state {
+    case .configured:
+      lock.unlock()
+      completion(nil)
+    case .initializing:
+      readinessWaiters.append(completion)
+      lock.unlock()
+    case .idle:
+      lock.unlock()
+      completion(CarrotQuestError.notConfigured)
+    }
+  }
+
+  /// Queue a fire-and-forget operation without leaking readiness into JS.
+  static func runWhenConfigured(
+    _ name: String,
+    operation: @escaping () -> Void
+  ) {
+    whenConfigured { error in
+      if let error = error {
+        NSLog("[CarrotQuest] %@ skipped because setup did not complete: %@", name, error.localizedDescription)
+        return
+      }
+
+      operation()
+    }
   }
 
   /// Initialise the SDK.
@@ -172,38 +209,62 @@ import CarrotSDK
         withAppGroup: appGroup,
         isServiceMode: isServiceMode,
         successHandler: {
-          // Read the latest theme rather than the one captured at call time —
-          // a caller that joined this attempt may have supplied a newer one.
-          lock.lock()
-          let theme = pendingTheme
-          pendingTheme = nil
-          lock.unlock()
-
-          if let theme = theme {
-            applyTheme(theme)
-          }
-
-          settle(state: .configured(identity), error: nil)
+          settleSuccess(identity: identity)
         },
         errorHandler: { message in
           NSLog("[CarrotQuest] setup failed: %@", message)
-          settle(state: .idle, error: CarrotQuestError.setupFailed(message))
+          settleFailure(CarrotQuestError.setupFailed(message))
         }
       )
     }
   }
 
-  /// Move out of `.initializing` and notify everyone who was waiting.
+  /// Apply the latest joined theme and publish `.configured` atomically.
   ///
-  /// On failure the state returns to `.idle` so a later call can retry.
-  private static func settle(state newState: State, error: Error?) {
+  /// A matching configure call either contributes its theme before this lock is
+  /// acquired, or observes `.configured` afterward and queues its own theme.
+  /// No caller can join between the final theme snapshot and the state change.
+  private static func settleSuccess(identity: Identity) {
     lock.lock()
-    state = newState
+    let theme = pendingTheme
+    pendingTheme = nil
+
+    if let theme = theme {
+      // applyTheme queues on the serial main queue. Calling it while holding the
+      // state lock preserves ordering with a later configured call.
+      applyTheme(theme)
+    }
+
+    state = .configured(identity)
     let waiting = pending
     pending = []
+    let ready = readinessWaiters
+    readinessWaiters = []
     lock.unlock()
 
     for completion in waiting {
+      completion(nil)
+    }
+    for completion in ready {
+      completion(nil)
+    }
+  }
+
+  /// Return to `.idle` after a failed attempt so a later call can retry.
+  private static func settleFailure(_ error: Error) {
+    lock.lock()
+    state = .idle
+    pendingTheme = nil
+    let waiting = pending
+    pending = []
+    let ready = readinessWaiters
+    readinessWaiters = []
+    lock.unlock()
+
+    for completion in waiting {
+      completion(error)
+    }
+    for completion in ready {
       completion(error)
     }
   }

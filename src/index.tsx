@@ -1,3 +1,7 @@
+import * as CarrotQuest from './carrot-quest';
+
+export default CarrotQuest;
+
 export {
   auth,
   closeChat,

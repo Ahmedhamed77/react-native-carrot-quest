@@ -57,6 +57,8 @@ object CarrotQuestSetup {
   private val lock = Any()
   private var state: State = State.Idle
   private var pending = mutableListOf<(Throwable?) -> Unit>()
+  /** SDK operations called after setup started but before it finished. */
+  private var readinessWaiters = mutableListOf<(Throwable?) -> Unit>()
 
   /** Application context the SDK was initialised with. Used to re-init after logout. */
   @Volatile
@@ -89,6 +91,41 @@ object CarrotQuestSetup {
       // be told it is ready.
       .onFailure { Log.w(TAG, "Carrot.isInit() threw; reporting not-configured", it) }
       .getOrDefault(false)
+
+  /**
+   * Run an SDK operation once the one application-level setup call settles.
+   *
+   * Operations arriving while setup is in flight are queued natively. Calls
+   * made before setup starts fail immediately, and a failed setup rejects every
+   * queued operation with the same error.
+  */
+  internal fun whenConfigured(completion: (Throwable?) -> Unit) {
+    val immediateError = synchronized(lock) {
+      when (state) {
+        is State.Configured -> null
+        is State.Initializing -> {
+          readinessWaiters.add(completion)
+          return
+        }
+        State.Idle -> CarrotQuestNotConfiguredException()
+      }
+    }
+
+    completion(immediateError)
+  }
+
+  /** Queue a fire-and-forget operation without leaking readiness into JS. */
+  internal fun runWhenConfigured(name: String, operation: () -> Unit) {
+    whenConfigured ready@ { error ->
+      if (error != null) {
+        Log.e(TAG, "$name skipped because setup did not complete", error)
+        return@ready
+      }
+
+      runCatching(operation)
+        .onFailure { Log.e(TAG, "$name failed", it) }
+    }
+  }
 
   /**
    * Initialise the SDK.
@@ -176,10 +213,14 @@ object CarrotQuestSetup {
 
     try {
       start(applicationContext, options) { error ->
-        settle(if (error == null) State.Configured(identity) else State.Idle, error)
+        if (error == null) {
+          settleSuccess(applicationContext, identity, options)
+        } else {
+          settleFailure(error)
+        }
       }
     } catch (error: Throwable) {
-      settle(State.Idle, error)
+      settleFailure(error)
     }
   }
 
@@ -269,14 +310,9 @@ object CarrotQuestSetup {
           return
         }
 
-        // Apply the settings that require an initialised SDK, then report.
-        //
-        // Read the merged options rather than the ones captured when this
-        // attempt started: a caller that joined mid-flight may have supplied a
-        // theme the first caller did not, and that is the whole point of the
-        // documented native-init-then-JS-setup pattern.
-        applyMutableOptions(context, lastOptions ?: options)
-
+        // Finalisation owns applying the latest merged options and publishing
+        // Configured as one serialised operation. Keeping that work together is
+        // what closes the late-join window.
         onSettled(null)
       }
 
@@ -299,17 +335,50 @@ object CarrotQuestSetup {
     }
   }
 
-  /** Move out of Initializing and notify everyone who was waiting. */
-  private fun settle(newState: State, error: Throwable?) {
+  /**
+   * Apply the final merged options and publish Configured atomically.
+   *
+   * A matching configure call either acquires [lock] first and contributes its
+   * mutable options to [lastOptions], or acquires it after this method and sees
+   * [State.Configured], where it applies those options itself. There is no gap
+   * in which a caller can join, resolve, and have its options skipped.
+   */
+  private fun settleSuccess(
+    context: Context,
+    identity: Identity,
+    fallbackOptions: Options,
+  ) {
     val waiting: List<(Throwable?) -> Unit>
+    val ready: List<(Throwable?) -> Unit>
 
     synchronized(lock) {
-      state = newState
+      applyMutableOptions(context, lastOptions ?: fallbackOptions)
+      state = State.Configured(identity)
       waiting = pending.toList()
       pending = mutableListOf()
+      ready = readinessWaiters.toList()
+      readinessWaiters = mutableListOf()
+    }
+
+    waiting.forEach { it(null) }
+    ready.forEach { it(null) }
+  }
+
+  /** Return to Idle after a failed attempt and reject every joined caller. */
+  private fun settleFailure(error: Throwable) {
+    val waiting: List<(Throwable?) -> Unit>
+    val ready: List<(Throwable?) -> Unit>
+
+    synchronized(lock) {
+      state = State.Idle
+      waiting = pending.toList()
+      pending = mutableListOf()
+      ready = readinessWaiters.toList()
+      readinessWaiters = mutableListOf()
     }
 
     waiting.forEach { it(error) }
+    ready.forEach { it(error) }
   }
 
   /**
@@ -334,11 +403,15 @@ object CarrotQuestSetup {
 
     try {
       start(context, options) { error ->
-        settle(if (error == null) State.Configured(identity) else State.Idle, error)
+        if (error == null) {
+          settleSuccess(context, identity, options)
+        } else {
+          settleFailure(error)
+        }
         completion(error)
       }
     } catch (error: Throwable) {
-      settle(State.Idle, error)
+      settleFailure(error)
       completion(error)
     }
   }

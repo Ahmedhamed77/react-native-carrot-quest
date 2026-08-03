@@ -215,10 +215,12 @@ export interface CarrotQuest extends HybridObject<{
   /**
    * Initialise the SDK with your Carrot quest API key.
    *
-   * Resolves only once the SDK reports success, so it is safe to authenticate
-   * immediately after awaiting it. Concurrent calls — including a native
-   * launch-time init racing a JS call — share a single initialisation and all
-   * resolve together.
+   * Call this once from `index.js` or the root app component. Operations called
+   * while setup is still in flight wait in the native setup queue, so consuming
+   * apps do not need their own readiness promise or repeated setup calls.
+   *
+   * Resolves only once the SDK reports success. Concurrent matching setup calls
+   * share a single initialisation and all resolve together.
    *
    * Rejects if the SDK reports a failure, e.g. an invalid API key or no
    * network.
