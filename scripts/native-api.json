@@ -2,8 +2,8 @@
   "$comment": "Native SDK symbols this bridge calls, and the SDK versions they were last verified against. Run `yarn verify:native` after bumping either pin; the offline guard in src/__tests__/native-compat.test.ts fails if a pin moves without the corresponding verifiedVersion being updated here.",
   "ios": {
     "pod": "CarrotquestSDK",
-    "verifiedVersion": "3.2.1",
-    "podspecConstraint": "~> 3.1",
+    "verifiedVersion": "3.4.0",
+    "podspecConstraint": "~> 3.4",
     "requiredSymbols": [
       "func setup(withApiKey key: Swift.String, useEuServer: Swift.Bool",
       "func auth(withUserId userId: Swift.String, withUserAuthKey key: Swift.String",
@@ -35,12 +35,18 @@
       "func openUniversalLink(_ url: Foundation.URL)",
       "init(key: Swift.String, value: Swift.String, operation:",
       "init(key: CarrotSDK.CarrotUserProperty.Property, value: Swift.String, operation:",
-      "init(key: CarrotSDK.EcommerceUserProperty.Property, value: Swift.String, operation:"
+      "init(key: CarrotSDK.EcommerceUserProperty.Property, value: Swift.String, operation:",
+      "func setLogLevel(_ level: CarrotSDK.SdkLogLevel)",
+      "func setLogSink(_ sink: (any CarrotSDK.SdkLogSink)?)",
+      "func setLogIncludeSensitive(_ include: Swift.Bool)",
+      "func getDiagnostics() -> CarrotSDK.SdkDiagnostics",
+      "func onLog(_ entry: CarrotSDK.SdkLogEntry)",
+      "func toFormattedString() -> Swift.String"
     ]
   },
   "android": {
     "artifact": "io.carrotquest:android-sdk",
-    "verifiedVersion": "3.1.0-commonRelease",
+    "verifiedVersion": "3.4.2-commonRelease",
     "classes": [
       {
         "path": "io/carrotquest_sdk/android/core/main/cqb.class",

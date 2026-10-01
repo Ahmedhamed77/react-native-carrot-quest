@@ -93,8 +93,15 @@ describe('ios SDK pin', () => {
   });
 
   it('admits the verified version', () => {
-    // `~> 3.1` means >= 3.1, < 4.0.
-    expect(snapshot.ios.verifiedVersion).toMatch(/^3\./);
+    // `~> 3.4` means >= 3.4, < 4.0.
+    const floor = /~>\s*(\d+)\.(\d+)/.exec(constraint ?? '');
+    const [floorMajor, floorMinor] = [Number(floor?.[1]), Number(floor?.[2])];
+    const [major, minor] = (snapshot.ios.verifiedVersion as string)
+      .split('.')
+      .map(Number);
+
+    expect(major).toBe(floorMajor);
+    expect(minor).toBeGreaterThanOrEqual(floorMinor);
   });
 });
 

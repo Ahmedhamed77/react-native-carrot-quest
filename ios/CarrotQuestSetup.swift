@@ -133,6 +133,9 @@ import CarrotSDK
   ///   - useEuServer: Route traffic to Carrot's EU servers.
   ///   - appGroup: App Group shared with your Notification Service Extension.
   ///   - isServiceMode: Run without UI, for use inside an extension process.
+  ///   - logLevel: Optional `SdkLogLevel` raw value, applied before `setup` so
+  ///     initialisation itself is logged at the requested level.
+  ///   - logIncludeSensitive: Allow tokens and user ids into SDK logs.
   @objc public static func configure(
     apiKey: String,
     locale: String? = nil,
@@ -140,6 +143,8 @@ import CarrotSDK
     useEuServer: Bool = false,
     appGroup: String? = nil,
     isServiceMode: Bool = false,
+    logLevel: NSNumber? = nil,
+    logIncludeSensitive: NSNumber? = nil,
     completion: ((Error?) -> Void)? = nil
   ) {
     let identity = Identity(
@@ -157,6 +162,10 @@ import CarrotSDK
       lock.unlock()
 
       let conflict = self.conflict(between: existing, and: identity)
+
+      if conflict == nil {
+        applyLogging(level: logLevel, includeSensitive: logIncludeSensitive)
+      }
 
       if conflict == nil, let theme = theme {
         // Identity matches, so this is a re-configure rather than a second
@@ -178,6 +187,8 @@ import CarrotSDK
 
       // Join the in-flight attempt rather than initialising a second time, but
       // carry this caller's theme into it so it is not lost.
+      applyLogging(level: logLevel, includeSensitive: logIncludeSensitive)
+
       if let theme = theme {
         pendingTheme = theme
       }
@@ -201,6 +212,9 @@ import CarrotSDK
     if let locale = locale {
       applyLocale(locale)
     }
+
+    // Logging first, so initialisation itself is covered by the level.
+    applyLogging(level: logLevel, includeSensitive: logIncludeSensitive)
 
     DispatchQueue.global(qos: .userInitiated).async {
       Carrot.shared.setup(
@@ -276,6 +290,17 @@ import CarrotSDK
 
     DispatchQueue.main.async {
       Carrot.shared.setTheme(value)
+    }
+  }
+
+  /// Apply logging options. Plain setters, safe before or after `setup`.
+  private static func applyLogging(level: NSNumber?, includeSensitive: NSNumber?) {
+    if let level = level, let value = SdkLogLevel(rawValue: level.intValue) {
+      Carrot.shared.setLogLevel(value)
+    }
+
+    if let includeSensitive = includeSensitive {
+      Carrot.shared.setLogIncludeSensitive(includeSensitive.boolValue)
     }
   }
 

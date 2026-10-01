@@ -42,7 +42,8 @@
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
     "test": "jest",
     "test:coverage": "jest --coverage",
-    "verify:native": "node scripts/verify-native-api.mjs"
+    "verify:native": "node scripts/verify-native-api.mjs",
+    "release": "release-it --only-version"
   },
   "keywords": [
     "react-native",
@@ -64,27 +65,32 @@
     "registry": "https://registry.npmjs.org/"
   },
   "devDependencies": {
+    "@commitlint/config-conventional": "^21.2.0",
     "@eslint/compat": "^2.1.0",
     "@eslint/eslintrc": "^3.3.5",
     "@eslint/js": "^10.0.1",
     "@react-native/babel-preset": "0.85.0",
     "@react-native/eslint-config": "0.85.0",
+    "@release-it/conventional-changelog": "^12.0.0",
     "@types/jest": "^29",
     "@types/node": "^26.1.2",
     "@types/react": "^19.2.0",
     "babel-jest": "^29",
+    "commitlint": "^21.2.1",
     "del-cli": "^7.0.0",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-ft-flow": "^3.0.11",
     "eslint-plugin-prettier": "^5.5.6",
     "jest": "^29",
+    "lefthook": "^2.1.10",
     "nitrogen": "^0.35.3",
     "prettier": "^3.8.3",
     "react": "19.2.3",
     "react-native": "0.85.0",
     "react-native-builder-bob": "^0.41.0",
     "react-native-nitro-modules": "^0.35.3",
+    "release-it": "^21.0.1",
     "turbo": "^2.9.16",
     "typescript": "^6.0.3"
   },
@@ -136,5 +142,32 @@
       "eslint"
     ],
     "version": "0.63.0"
+  },
+  "release-it": {
+    "git": {
+      "commitMessage": "chore: release ${version}",
+      "tagName": "v${version}",
+      "requireBranch": "main"
+    },
+    "npm": {
+      "publish": false
+    },
+    "github": {
+      "release": false
+    },
+    "plugins": {
+      "@release-it/conventional-changelog": {
+        "infile": "CHANGELOG.md",
+        "header": "# Changelog",
+        "preset": {
+          "name": "conventionalcommits"
+        }
+      }
+    }
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
   }
 }

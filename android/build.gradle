@@ -6,11 +6,11 @@ buildscript {
     // Carrot publishes one artifact per region flavour: `commonRelease` for the
     // default servers, `usRelease` for the US ones. Override from your app's
     // android/build.gradle:
-    //   ext { carrotSdkVersion = "3.1.0-usRelease" }
+    //   ext { carrotSdkVersion = "3.4.2-usRelease" }
     //
     // Must stay on the 3.x line — 2.x has a callback-free `setup`, a `setDebug`
     // toggle and JSON-string event params, none of which this bridge uses.
-    carrotSdkVersion: "3.1.0-commonRelease"
+    carrotSdkVersion: "3.4.2-commonRelease"
   ]
 
   ext.getExtOrDefault = { prop ->
@@ -120,7 +120,7 @@ repositories {
   // Carrot quest publishes its Android SDK from a GitHub-hosted Maven repo
   // rather than Maven Central.
   maven { url "https://raw.github.com/carrotquest/android-sdk/carrotquest" }
-  // Required for the SDK's own transitive GitHub dependencies — 3.1.0 pulls
+  // Required for the SDK's own transitive GitHub dependencies — 3.x pulls
   // com.github.Redman1037:TSnackBar and com.github.chrisbanes:PhotoView.
   maven { url "https://jitpack.io" }
 }

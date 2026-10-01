@@ -92,6 +92,49 @@ yarn lint --fix
 
 
 
+### Commit messages
+
+Commits follow [Conventional Commits](https://www.conventionalcommits.org/),
+enforced by [commitlint](https://commitlint.js.org/) through a
+[lefthook](https://github.com/evilmartians/lefthook) `commit-msg` hook. The
+changelog and the version bump are generated from them:
+
+- `fix: ...` — patch
+- `feat: ...` — minor
+- `feat!: ...` or a `BREAKING CHANGE:` footer — major
+- `chore:`, `docs:`, `test:`, `ci:`, `refactor:` — no release notes
+
+Bumping a native SDK pin is user-visible (it changes what apps resolve), so use
+`feat:` or `fix:` and mention the new versions in the subject.
+
+### Publishing to npm
+
+Releases are cut locally and published by CI. You never run `npm publish`.
+
+1. Check out `main`, up to date, with a clean working tree and CI green.
+2. Run `yarn verify:native` (online) so both native pins are re-checked.
+3. Run:
+
+   ```sh
+   yarn release
+   ```
+
+   [release-it](https://github.com/release-it/release-it) suggests the next
+   version from the commits, updates `CHANGELOG.md`, commits
+   `chore: release <version>`, tags `v<version>` and pushes both.
+4. The `v*` tag triggers [`release.yml`](.github/workflows/release.yml), which
+   re-runs lint, typecheck, tests and the Android SDK check, builds the package,
+   publishes it to npm with provenance and creates the GitHub Release from the
+   changelog.
+
+To preview a release without changing anything: `yarn release --dry-run`.
+
+**One-time setup (maintainer).** Publishing uses npm
+[trusted publishing](https://docs.npmjs.com/trusted-publishers) rather than a
+token. On npmjs.com open the package → Settings → Trusted Publisher and add a
+GitHub Actions publisher: owner `Ahmedhamed77`, repository
+`react-native-carrot-quest`, workflow `release.yml`.
+
 ### Scripts
 
 The `package.json` file contains various scripts for common tasks:
@@ -104,6 +147,7 @@ The `package.json` file contains various scripts for common tasks:
 - `yarn example ios`: run the example app on iOS.
 - `yarn test`: run the unit tests.
 - `yarn verify:native`: check the bridge against the pinned native SDKs.
+- `yarn release`: bump the version, update the changelog, tag and push (see above).
 
 ### Verifying the native SDK surface
 

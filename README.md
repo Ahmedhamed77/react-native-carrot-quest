@@ -342,8 +342,8 @@ On Android, links route through the activity named by
 | `wasPushShownEarlier(payload)` | `Promise<boolean>` | ✅ | — |
 | `onUrlOpen(source, cb)` | `Subscription` | ✅ | — |
 | `openBrowserLink(url)` / `openUniversalLink(url)` | `void` | ✅ | — |
-| `getDiagnostics()` | `string \| undefined` | — | ✅ |
-| `onLog(cb)` | `Subscription` | — | ✅ |
+| `getDiagnostics()` | `string \| undefined` | ✅ | ✅ |
+| `onLog(cb)` | `Subscription` | ✅ | ✅ |
 
 Methods that cannot meaningfully fail are synchronous and return `void`. Methods
 that can fail return a `Promise` so you get the error. A `—` means the platform's
@@ -351,8 +351,8 @@ SDK has no equivalent; those calls are inert rather than throwing.
 
 ### Forwarding SDK logs
 
-Android only. Useful for routing the SDK's own diagnostics into your crash
-reporter:
+Both platforms (iOS needs `CarrotquestSDK` 3.4+). Useful for routing the SDK's
+own diagnostics into your crash reporter:
 
 ```ts
 import { onLog } from 'react-native-carrot-quest';
@@ -414,14 +414,18 @@ Only set it if you need to pin the chat to one language.
 
 | Platform | Pinned |
 |---|---|
-| iOS | `CarrotquestSDK ~> 3.1` (verified against 3.2.1) |
-| Android | `io.carrotquest:android-sdk:3.1.0-commonRelease` |
+| iOS | `CarrotquestSDK ~> 3.4` (verified against 3.4.0) |
+| Android | `io.carrotquest:android-sdk:3.4.2-commonRelease` |
+
+Upgrading an existing iOS app: run `pod update CarrotquestSDK` — a Podfile.lock
+pinned to 3.1–3.3 will not move on its own, and 3.4+ is required for the log and
+diagnostics APIs.
 
 Carrot publishes one Android artifact per region flavour — `commonRelease` or
 `usRelease`. Override from your app's `android/build.gradle`:
 
 ```gradle
-ext { carrotSdkVersion = "3.1.0-usRelease" }
+ext { carrotSdkVersion = "3.4.2-usRelease" }
 ```
 
 **Android 2.x is not supported.** It exposes a callback-free `setup()` that

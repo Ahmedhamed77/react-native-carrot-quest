@@ -24,7 +24,9 @@ final class CarrotQuest: HybridCarrotQuestSpec {
       theme: options?.theme.map { NSNumber(value: Self.nativeTheme($0).rawValue) },
       useEuServer: options?.useEuServer ?? false,
       appGroup: options?.appGroup,
-      isServiceMode: options?.isServiceMode ?? false
+      isServiceMode: options?.isServiceMode ?? false,
+      logLevel: options?.logLevel.map { NSNumber(value: Self.nativeLogLevel($0).rawValue) },
+      logIncludeSensitive: options?.logIncludeSensitive.map { NSNumber(value: $0) }
     ) { error in
       if let error = error {
         promise.reject(withError: error)
@@ -573,16 +575,85 @@ final class CarrotQuest: HybridCarrotQuestSpec {
   // MARK: - Diagnostics
 
   func getDiagnostics() throws -> String? {
-    // Android-only: the iOS SDK exposes no diagnostics dump.
-    return nil
+    // Deliberately not gated on setup: the snapshot carries `isInitialized` and
+    // `recentLogs`, which are what you want when setup fails.
+    return Carrot.shared.getDiagnostics().toFormattedString()
   }
 
+  /// Strong reference: the SDK takes the sink as a protocol object and may not
+  /// retain it, so dropping this would silently stop log delivery.
+  private static var logSink: CarrotQuestLogSink?
+
   func onLog(listener: @escaping (CarrotQuestLogEntry) -> Void) throws {
-    // Android-only: the iOS SDK has no logging hook to attach to.
-    // Documented on the spec; intentionally inert here.
+    let sink = CarrotQuestLogSink(listener: listener)
+
+    Self.logSink = sink
+    Carrot.shared.setLogSink(sink)
   }
 
   func offLog() throws {
-    // Nothing was ever attached on iOS.
+    Carrot.shared.setLogSink(nil)
+    Self.logSink = nil
+  }
+
+  private static func nativeLogLevel(_ level: CarrotQuestLogLevel) -> SdkLogLevel {
+    switch level {
+    case .none: return .none
+    case .error: return .error
+    case .warn: return .warn
+    case .info: return .info
+    // Spelled `debugging` on the JS side — `DEBUG` is a C macro in RN Debug builds.
+    case .debugging: return .debug
+    case .verbose: return .verbose
+    }
+  }
+
+  fileprivate static func jsLogLevel(_ level: SdkLogLevel) -> CarrotQuestLogLevel {
+    switch level {
+    case .none: return .none
+    case .error: return .error
+    case .warn: return .warn
+    case .info: return .info
+    case .debug: return .debugging
+    case .verbose: return .verbose
+    // Future SDK levels: report them at the closest known verbosity.
+    @unknown default: return .verbose
+    }
+  }
+
+  fileprivate static func jsLogCategory(_ category: SdkLogCategory) -> CarrotQuestLogCategory {
+    switch category {
+    case .general: return .general
+    case .network: return .network
+    case .connectivity: return .connectivity
+    case .auth: return .auth
+    case .realtime: return .realtime
+    case .lifecycle: return .lifecycle
+    case .push: return .push
+    @unknown default: return .general
+    }
+  }
+}
+
+/// Adapts the SDK's `SdkLogSink` protocol to a JS listener.
+private final class CarrotQuestLogSink: SdkLogSink {
+  private let listener: (CarrotQuestLogEntry) -> Void
+
+  init(listener: @escaping (CarrotQuestLogEntry) -> Void) {
+    self.listener = listener
+  }
+
+  func onLog(_ entry: SdkLogEntry) {
+    listener(
+      CarrotQuestLogEntry(
+        timestampMs: entry.timestamp.timeIntervalSince1970 * 1000,
+        level: CarrotQuest.jsLogLevel(entry.level),
+        category: CarrotQuest.jsLogCategory(entry.category),
+        tag: entry.tag,
+        message: entry.message,
+        fields: entry.fields,
+        error: entry.error.map { String(describing: $0) }
+      )
+    )
   }
 }

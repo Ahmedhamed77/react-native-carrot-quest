@@ -166,9 +166,9 @@ export default function App() {
 
       <Section title="diagnostics" />
       <Button
-        title="getDiagnostics (Android)"
+        title="getDiagnostics"
         onPress={() =>
-          run('getDiagnostics', () => getDiagnostics() ?? 'iOS: n/a')
+          run('getDiagnostics', () => getDiagnostics() ?? 'not configured')
         }
       />
     </ScrollView>

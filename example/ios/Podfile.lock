@@ -1,6 +1,6 @@
 PODS:
   - CarrotQuest (0.1.0):
-    - CarrotquestSDK (~> 3.1)
+    - CarrotquestSDK (~> 3.4)
     - hermes-engine
     - NitroModules
     - RCTRequired
@@ -24,7 +24,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - CarrotquestSDK (3.2.1)
+  - CarrotquestSDK (3.4.0)
   - FBLazyVector (0.85.0)
   - hermes-engine (250829098.0.10):
     - hermes-engine/Pre-built (= 250829098.0.10)
@@ -2034,8 +2034,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
 SPEC CHECKSUMS:
-  CarrotQuest: c7aa0b73132ba16df81c682ee4bf27173060a120
-  CarrotquestSDK: 49d41ccb9f4213111f76856d8e445f61392fc6d2
+  CarrotQuest: 5db246d8e99386ee4220322f6187958db188292a
+  CarrotquestSDK: d5ccf276ee05c004cb42613eb851d03a29f6cad8
   FBLazyVector: c00c20551d40126351a6783c47ce75f5b374851b
   hermes-engine: ad9a38d5c57078754f408bbca2c344f43b6c897b
   NitroModules: 994eaa7fc39d1fb4b76bb61054312c9796c4a649
@@ -2113,4 +2113,4 @@ SPEC CHECKSUMS:
 
 PODFILE CHECKSUM: 3d428fcc6c235bc0867078e746f790a3d540bd53
 
-COCOAPODS: 1.15.2
+COCOAPODS: 1.17.0

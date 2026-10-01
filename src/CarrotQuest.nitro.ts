@@ -10,8 +10,8 @@ import type { HybridObject } from 'react-native-nitro-modules';
 export type CarrotQuestTheme = 'light' | 'dark' | 'fromDevice' | 'fromWeb';
 
 /**
- * Android SDK log level, in increasing verbosity. Android only — the iOS SDK
- * exposes no logging control.
+ * Native SDK log level, in increasing verbosity. Both platforms (iOS needs
+ * `CarrotquestSDK` 3.4+).
  *
  * `debugging` maps to the SDK's `DEBUG` level. It is spelled out rather than
  * abbreviated because Nitro derives a C++ enum member from each value, and
@@ -22,7 +22,8 @@ export type CarrotQuestLogLevel =
   'none' | 'error' | 'warn' | 'info' | 'debugging' | 'verbose';
 
 /**
- * Which subsystem produced a log entry. Mirrors Android's `SdkLogCategory`.
+ * Which subsystem produced a log entry. Mirrors `SdkLogCategory`. `database` is
+ * emitted by Android only.
  */
 export type CarrotQuestLogCategory =
   | 'general'
@@ -35,7 +36,7 @@ export type CarrotQuestLogCategory =
   | 'push';
 
 /**
- * A single log line emitted by the native SDK. Android only.
+ * A single log line emitted by the native SDK.
  */
 export interface CarrotQuestLogEntry {
   /** Milliseconds since the Unix epoch. */
@@ -189,11 +190,11 @@ export interface CarrotQuestSetupOptions {
    * Android only.
    */
   notificationIconResourceName?: string;
-  /** SDK log level. Android only. */
+  /** SDK log level. */
   logLevel?: CarrotQuestLogLevel;
   /**
-   * Allow sensitive values (tokens, user ids) into SDK logs. Android only.
-   * Leave off in production.
+   * Allow sensitive values (tokens, user ids) into SDK logs. Leave off in
+   * production.
    */
   logIncludeSensitive?: boolean;
 }
@@ -464,15 +465,16 @@ export interface CarrotQuest extends HybridObject<{
   /**
    * A formatted dump of the SDK's internal state and recent logs.
    *
-   * Android only, via `getDiagnostics()`. Returns `undefined` on iOS.
+   * Backed by `getDiagnostics()` on both platforms. Safe to call before or
+   * after {@link setup} — including after it fails, when the dump is most
+   * useful.
    */
   getDiagnostics(): string | undefined;
 
   /**
    * Receive the SDK's log entries, e.g. to forward them to a crash reporter.
    *
-   * Android only, via `setLogSink`. Never fires on iOS, whose SDK exposes no
-   * logging hook.
+   * Backed by `setLogSink` on both platforms.
    *
    * Entries are filtered by {@link CarrotQuestSetupOptions.logLevel}, so leave
    * that at `info` or lower in production — `verbose` crosses the bridge for
