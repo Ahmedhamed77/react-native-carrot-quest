@@ -3,6 +3,7 @@ buildscript {
     kotlinVersion: "2.0.21",
     minSdkVersion: 24,
     compileSdkVersion: 36,
+    ndkVersion: "27.1.12297006",
     // Carrot publishes one artifact per region flavour: `commonRelease` for the
     // default servers, `usRelease` for the US ones. Override from your app's
     // android/build.gradle:
@@ -48,6 +49,7 @@ android {
   namespace "com.margelo.nitro.carrotquest"
 
   compileSdkVersion getExtOrDefault("compileSdkVersion")
+  ndkVersion getExtOrDefault("ndkVersion")
 
   defaultConfig {
     minSdkVersion getExtOrDefault("minSdkVersion")
