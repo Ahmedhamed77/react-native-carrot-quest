@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.0](https://github.com/Ahmedhamed77/react-native-carrot-quest/compare/v0.2.0...v0.3.0) (2026-10-08)
+
+### Features
+
+* bump nitro version to 0.37.1 ([63287cd](https://github.com/Ahmedhamed77/react-native-carrot-quest/commit/63287cdf181fa0180ceb8a997292925bad966422))
+
 ## 0.2.0 (2026-10-01)
 
 ### Features
