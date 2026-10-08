@@ -18,4 +18,16 @@ buildscript {
     }
 }
 
+// Same as the README's "Android setup": the Carrot SDK and two of its transitive
+// dependencies are not on Maven Central, and a library's own `repositories`
+// block is not visible to the app that resolves its dependencies.
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url "https://raw.github.com/carrotquest/android-sdk/carrotquest" }
+        maven { url "https://jitpack.io" }
+    }
+}
+
 apply plugin: "com.facebook.react.rootproject"
