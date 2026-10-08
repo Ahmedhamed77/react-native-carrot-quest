@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.4.0](https://github.com/Ahmedhamed77/react-native-carrot-quest/compare/v0.3.1...v0.4.0) (2026-10-08)
+
+### Features
+
+* pin ndk to match react-native version ([41b8453](https://github.com/Ahmedhamed77/react-native-carrot-quest/commit/41b84534004a99bed363f15b9e3216f48294f368))
+
 ## [0.3.1](https://github.com/Ahmedhamed77/react-native-carrot-quest/compare/v0.3.0...v0.3.1) (2026-10-08)
 
 ### Bug Fixes
