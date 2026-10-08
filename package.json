@@ -1,6 +1,6 @@
 {
   "name": "react-native-carrot-quest",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Unofficial React Native bindings for the Carrot quest SDK, built with Nitro Modules.",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",

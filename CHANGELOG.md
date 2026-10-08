@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.1](https://github.com/Ahmedhamed77/react-native-carrot-quest/compare/v0.3.0...v0.3.1) (2026-10-08)
+
+### Bug Fixes
+
+* run Carrot.setup on a background thread for safer main thread execution ([ce7120a](https://github.com/Ahmedhamed77/react-native-carrot-quest/commit/ce7120a08a79ac63a45fa2b66c224e5b65a5ece2))
+
 ## [0.3.0](https://github.com/Ahmedhamed77/react-native-carrot-quest/compare/v0.2.0...v0.3.0) (2026-10-08)
 
 ### Features
