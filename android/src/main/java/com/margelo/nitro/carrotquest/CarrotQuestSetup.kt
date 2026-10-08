@@ -29,8 +29,9 @@ import java.util.Locale
  * that *disagree* fail with [CarrotQuestConfigurationConflictException] rather
  * than silently keeping the first configuration.
  *
- * `Carrot.setup` performs I/O, so call this off the main thread; this object
- * does not spawn its own thread, leaving the scheduler choice to the caller.
+ * `Carrot.setup` performs I/O, so this object runs it on its own background
+ * thread. The call returns as soon as the Initializing state is published, so
+ * it is safe to call from the main thread or the JS thread.
  */
 object CarrotQuestSetup {
   private const val TAG = "CarrotQuest"
@@ -211,17 +212,21 @@ object CarrotQuestSetup {
 
     val applicationContext = context.applicationContext
 
-    try {
-      start(applicationContext, options) { error ->
-        if (error == null) {
-          settleSuccess(applicationContext, identity, options)
-        } else {
-          settleFailure(error)
+    // The Initializing state above is already published, so calls that arrive
+    // before this thread runs queue as readiness waiters instead of failing.
+    Thread({
+      try {
+        start(applicationContext, options) { error ->
+          if (error == null) {
+            settleSuccess(applicationContext, identity, options)
+          } else {
+            settleFailure(error)
+          }
         }
+      } catch (error: Throwable) {
+        settleFailure(error)
       }
-    } catch (error: Throwable) {
-      settleFailure(error)
-    }
+    }, "carrot-sdk-init").start()
   }
 
   /**
