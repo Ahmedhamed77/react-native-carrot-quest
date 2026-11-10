@@ -1,6 +1,25 @@
 # react-native-carrot-quest
 
-Unofficial React Native bindings for the [Carrot quest](https://www.carrotquest.io/) mobile SDKs, built with [Nitro Modules](https://nitro.margelo.com/).
+[![npm version](https://img.shields.io/npm/v/react-native-carrot-quest)](https://www.npmjs.com/package/react-native-carrot-quest)
+[![npm downloads](https://img.shields.io/npm/dm/react-native-carrot-quest)](https://www.npmjs.com/package/react-native-carrot-quest)
+[![CI](https://github.com/Ahmedhamed77/react-native-carrot-quest/actions/workflows/ci.yml/badge.svg)](https://github.com/Ahmedhamed77/react-native-carrot-quest/actions/workflows/ci.yml)
+[![license](https://img.shields.io/npm/l/react-native-carrot-quest)](./LICENSE)
+![platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20Android-blue)
+
+**Carrot quest SDK for React Native** — add the [Carrot quest](https://www.carrotquest.io/)
+(carrotquest) customer messenger to your iOS and Android app: live chat with
+support, push notifications, user identification and properties, event and
+screen tracking, and UTM attribution. Unofficial, typed in TypeScript, and built
+with [Nitro Modules](https://nitro.margelo.com/) for the React Native New
+Architecture.
+
+```ts
+import { setup, hashedAuth, openChat } from 'react-native-carrot-quest';
+
+await setup('YOUR_API_KEY');
+await hashedAuth(userId, hashFromYourBackend);
+await openChat();
+```
 
 > **Not affiliated with Carrot quest.** Carrot does not officially support React
 > Native, so this package maintains its own compatibility coverage against the
@@ -415,7 +434,7 @@ Only set it if you need to pin the chat to one language.
 | Platform | Pinned |
 |---|---|
 | iOS | `CarrotquestSDK ~> 3.4` (verified against 3.4.0) |
-| Android | `io.carrotquest:android-sdk:3.4.2-commonRelease` |
+| Android | `io.carrotquest:android-sdk:3.5.1-commonRelease` |
 
 Upgrading an existing iOS app: run `pod update CarrotquestSDK` — a Podfile.lock
 pinned to 3.1–3.3 will not move on its own, and 3.4+ is required for the log and
@@ -425,7 +444,7 @@ Carrot publishes one Android artifact per region flavour — `commonRelease` or
 `usRelease`. Override from your app's `android/build.gradle`:
 
 ```gradle
-ext { carrotSdkVersion = "3.4.2-usRelease" }
+ext { carrotSdkVersion = "3.5.1-usRelease" }
 ```
 
 **Android 2.x is not supported.** It exposes a callback-free `setup()` that

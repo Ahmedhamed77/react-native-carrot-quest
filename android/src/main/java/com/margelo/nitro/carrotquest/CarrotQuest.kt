@@ -416,7 +416,9 @@ class CarrotQuest : HybridCarrotQuestSpec() {
   override fun trackUtm(url: String) {
     if (url.isEmpty()) return
 
-    Carrot.trackUtm(url)
+    CarrotQuestSetup.runWhenConfigured("trackUtm") {
+      Carrot.trackUtm(url)
+    }
   }
 
   // MARK: - Push notifications
@@ -492,12 +494,8 @@ class CarrotQuest : HybridCarrotQuestSpec() {
       val result = mutableMapOf<String, String>()
 
       json.keys().forEach { key ->
-        val value = json.get(key)
-        result[key] = if (value is JSONObject || value is org.json.JSONArray) {
-          value.toString()
-        } else {
-          value.toString()
-        }
+        // Nested objects/arrays are re-encoded as JSON, as FCM delivers them.
+        result[key] = json.get(key).toString()
       }
 
       result

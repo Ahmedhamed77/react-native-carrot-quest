@@ -404,7 +404,11 @@ final class CarrotQuest: HybridCarrotQuestSpec {
   func trackUtm(url: String) throws {
     guard let parsed = URL(string: url) else { return }
 
-    Carrot.shared.trackUtm(parsed)
+    // Queued like every other call: a campaign deep link that opens the app
+    // cold arrives before setup has finished.
+    CarrotQuestSetup.runWhenConfigured("trackUtm") {
+      Carrot.shared.trackUtm(parsed)
+    }
   }
 
   // MARK: - Push notifications

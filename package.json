@@ -1,7 +1,7 @@
 {
   "name": "react-native-carrot-quest",
   "version": "0.4.0",
-  "description": "Unofficial React Native bindings for the Carrot quest SDK, built with Nitro Modules.",
+  "description": "React Native SDK for Carrot quest (carrotquest) — live chat, push notifications, user tracking and events for iOS and Android. Unofficial, built with Nitro Modules.",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
   "exports": {
@@ -47,8 +47,31 @@
   },
   "keywords": [
     "react-native",
+    "react-native-carrot-quest",
+    "carrot-quest",
+    "carrotquest",
+    "carrot quest",
+    "react-native-carrotquest",
+    "nitro",
+    "nitro-modules",
+    "react-native-nitro-modules",
+    "customer-support",
+    "live-chat",
+    "chat",
+    "in-app-chat",
+    "messenger",
+    "crm",
+    "push-notifications",
+    "user-tracking",
+    "analytics",
+    "marketing-automation",
     "ios",
-    "android"
+    "android",
+    "swift",
+    "kotlin",
+    "typescript",
+    "new-architecture",
+    "sdk"
   ],
   "repository": {
     "type": "git",

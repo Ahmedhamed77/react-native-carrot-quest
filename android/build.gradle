@@ -7,11 +7,11 @@ buildscript {
     // Carrot publishes one artifact per region flavour: `commonRelease` for the
     // default servers, `usRelease` for the US ones. Override from your app's
     // android/build.gradle:
-    //   ext { carrotSdkVersion = "3.4.2-usRelease" }
+    //   ext { carrotSdkVersion = "3.5.1-usRelease" }
     //
     // Must stay on the 3.x line — 2.x has a callback-free `setup`, a `setDebug`
     // toggle and JSON-string event params, none of which this bridge uses.
-    carrotSdkVersion: "3.4.2-commonRelease"
+    carrotSdkVersion: "3.5.1-commonRelease"
   ]
 
   ext.getExtOrDefault = { prop ->

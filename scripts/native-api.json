@@ -2,7 +2,7 @@
   "$comment": "Native SDK symbols this bridge calls, and the SDK versions they were last verified against. Run `yarn verify:native` after bumping either pin; the offline guard in src/__tests__/native-compat.test.ts fails if a pin moves without the corresponding verifiedVersion being updated here.",
   "ios": {
     "pod": "CarrotquestSDK",
-    "verifiedVersion": "3.4.0",
+    "verifiedVersion": "3.5.0",
     "podspecConstraint": "~> 3.4",
     "requiredSymbols": [
       "func setup(withApiKey key: Swift.String, useEuServer: Swift.Bool",
@@ -46,7 +46,7 @@
   },
   "android": {
     "artifact": "io.carrotquest:android-sdk",
-    "verifiedVersion": "3.4.2-commonRelease",
+    "verifiedVersion": "3.5.1-commonRelease",
     "classes": [
       {
         "path": "io/carrotquest_sdk/android/core/main/cqb.class",
