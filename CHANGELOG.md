@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.0](https://github.com/Ahmedhamed77/react-native-carrot-quest/compare/v0.4.0...v0.5.0) (2026-11-10)
+
+### Features
+
+* update sdk versions ([8aa2f88](https://github.com/Ahmedhamed77/react-native-carrot-quest/commit/8aa2f88685edd3b58f094e7fb34a42533772606f))
+
 ## [0.4.0](https://github.com/Ahmedhamed77/react-native-carrot-quest/compare/v0.3.1...v0.4.0) (2026-10-08)
 
 ### Features
